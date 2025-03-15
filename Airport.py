@@ -1,4 +1,4 @@
-from collections import deques
+from collections import deque
 
 
 class Airport:
