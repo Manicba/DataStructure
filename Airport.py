@@ -1,65 +1,75 @@
-from collections import deque
+import random
+import queue
+import time
 
 
-class Airport:
-    def __init__(self):
-        self.landing_queue = deque()  # Landing requests (normal and emergency)
-        self.takeoff_queue = deque()  # Takeoff requests
+# Define a Plane class for easy tracking of plane type and ID
+class Plane:
+    def __init__(self, plane_id, request_type, is_emergency=False):
+        self.plane_id = plane_id
+        self.request_type = request_type
+        self.is_emergency = is_emergency
 
-    def request_landing(self, plane_id, emergency=False):
-        if emergency:
-            # Emergency landing, add to the front of the landing queue
-            self.landing_queue.appendleft(plane_id)
-        else:
-            # Regular landing, add to the end of the landing queue
-            self.landing_queue.append(plane_id)
-
-    def request_takeoff(self, plane_id):
-        self.takeoff_queue.append(plane_id)
-
-    def land_plane(self):
-        if self.landing_queue:
-            plane = self.landing_queue.popleft()  # Land the first plane in the queue
-            print(f"Plane {plane} has landed.")
-        else:
-            print("No planes waiting to land.")
-
-    def takeoff_plane(self):
-        if not self.landing_queue:  # Takeoffs are only allowed if no planes are waiting to land
-            if self.takeoff_queue:
-                plane = self.takeoff_queue.popleft()  # Takeoff the first plane in the takeoff queue
-                print(f"Plane {plane} has taken off.")
-            else:
-                print("No planes waiting to take off.")
-        else:
-            print("Cannot take off, landing queue is not empty.")
-
-    def emergency_landing(self, plane_id):
-        self.request_landing(plane_id, emergency=True)
-        print(f"Emergency landing for plane {plane_id}.")
+    def __repr__(self):
+        return f"Plane({self.plane_id}, {self.request_type}, Emergency={self.is_emergency})"
 
 
-# Example usage:
-airport = Airport()
+# Queue for landing requests (priority queue)
+landing_queue = queue.PriorityQueue()
+# Queue for takeoff requests (FIFO queue)
+takeoff_queue = queue.Queue()
 
-# Planes requesting landing
-airport.request_landing("PlaneA")
-airport.request_landing("PlaneB")
 
-# Request for takeoff
-airport.request_takeoff("Plane1")
+# Simulation functions
+def add_landing_request(plane):
+    # If emergency, assign highest priority (priority queue logic: -1 for emergency)
+    if plane.is_emergency:
+        landing_queue.put((0, plane))  # Emergency will have the highest priority (lowest number)
+    else:
+        landing_queue.put((1, plane))
 
-# Emergency landing
-airport.emergency_landing("PlaneC")
 
-# Land a plane
-airport.land_plane()
+def add_takeoff_request(plane):
+    takeoff_queue.put(plane)
 
-# Try taking off when landing queue is not empty
-airport.takeoff_plane()
 
-# Land another plane
-airport.land_plane()
+def process_landing():
+    if not landing_queue.empty():
+        # Get the highest priority plane (lowest priority number)
+        _, plane = landing_queue.get()
+        print(f"Plane {plane.plane_id} is landing.")
+    else:
+        print("No planes waiting for landing.")
 
-# Takeoff a plane now that landing queue is empty
-airport.takeoff_plane()
+
+def process_takeoff():
+    if landing_queue.empty() and not takeoff_queue.empty():
+        plane = takeoff_queue.get()
+        print(f"Plane {plane.plane_id} is taking off.")
+    else:
+        print("Takeoff denied: Landing queue is not empty or no planes waiting to take off.")
+
+
+def simulate():
+    plane_id = 1
+    for _ in range(10):  # Run the simulation for 10 steps
+        action = random.choice(['landing', 'takeoff'])
+        emergency = random.choice([True, False]) if action == 'landing' else False
+
+        if action == 'landing':
+            print(f"Request: Plane {plane_id} requesting landing. Emergency: {emergency}")
+            add_landing_request(Plane(plane_id, 'landing', emergency))
+        elif action == 'takeoff':
+            print(f"Request: Plane {plane_id} requesting takeoff.")
+            add_takeoff_request(Plane(plane_id, 'takeoff'))
+
+        # Process the queues
+        process_landing()
+        process_takeoff()
+
+        plane_id += 1
+        time.sleep(1)
+
+
+# Run the simulation
+simulate()
